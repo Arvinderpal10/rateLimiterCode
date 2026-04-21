@@ -199,7 +199,7 @@ Stop the server with `Ctrl+C`. The in‑memory data is lost on shutdown.
 
 ---
 
-## ✅ Summary of Endpoints
+## Summary of Endpoints
 
 | Method | Endpoint   | Description                           |
 |--------|------------|---------------------------------------|
