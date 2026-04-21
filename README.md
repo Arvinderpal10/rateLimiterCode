@@ -36,7 +36,7 @@ ratelimiter/
 
 ### Clone Repo :
 Clone the repo: https://github.com/Arvinderpal10/rateLimiterCode
-cd rateLimiterCode/cmd/api/
+cd rateLimiterCode
 
 ### Start the Server
 
@@ -116,7 +116,7 @@ Example response:
 
 Fire 20 requests with 10 in parallel and count HTTP status codes:
 
-```bash
+```shell
 seq 1 20 | xargs -n1 -P10 curl -s -o /dev/null -w "%{http_code}\n" \
   -X POST http://localhost:8080/request \
   -H "Content-Type: application/json" \
@@ -206,4 +206,33 @@ Stop the server with `Ctrl+C`. The in‑memory data is lost on shutdown.
 | POST   | `/request` | Process a payload (rate‑limited)      |
 | GET    | `/stats`   | Return current token counts per user  |
 
+## Design Decisions
+
+| Decision                          | Rationale                                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Token bucket algorithm            | Provides smooth, continuous rate limiting without fixed window boundary bursts                      |
+| Per user buckets                  | Isolates users so one heavy user cannot starve others                                               |
+| In memory storage                 | Simple and fast and meets the assignment requirement suitable for single instance deployments       |
+| Mutex per bucket                  | Guarantees accurate token consumption under concurrent requests for the same user                   |
+| RWMutex for user map              | Allows concurrent reads while safely handling new user creation                                     |
+| Background cleanup goroutine      | Prevents unbounded memory growth by removing inactive users                                         |
+| Graceful shutdown                 | Ensures in flight requests complete and background routines terminate cleanly                       |
+| Request ID middleware             | Improves observability each request can be traced through logs                                      |
+| Typed context keys                | Avoids key collisions with other middleware packages                                                |
+| Separate lastAccess field         | Cleanup uses actual last request time not refill time ensuring inactive users are evicted correctly |
+| Cryptographically random IDs      | Prevents predictable request IDs good for security and tracing                                      |
+| Production ready folder structure | Follows Go community standards cmd internal pkg makes the codebase maintainable and testable        |
+
+---
+
+## What would I improve 
+
+| Area           |     Improvement                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| Scalability    | Replace in memory store with Redis for distributed rate limiting                           |
+| Tiered Limits  | Support per user limits for example free equals 5 per minute premium equals 100 per minute |
+| Observability  | Add Prometheus metrics and Grafana health and ready endpoints                                          |             |
+| Resilience     | Add retry mechanism and deadletter queue                                         |
+| Testing        | Comprehensive unit and integration tests with race detector                                |                        |
+| Deployment     | Dockerfile and Kubernetes manifests                                                        |
 ---
